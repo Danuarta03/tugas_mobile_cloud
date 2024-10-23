@@ -1,93 +1,107 @@
-// src/components/dashboard.tsx
-"use client";
-import { useEffect, useState } from 'react';
+'use client';
 
-interface Student {
-  nim: number;
-  name: string;
-  age: number;
-  major: string;
-}
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
-const Dashboard = () => {
-  const [students, setStudents] = useState<Student[]>([]);
-  const [newStudent, setNewStudent] = useState({ name: '', age: '', major: '' });
+// Definisikan tipe Mahasiswa untuk memastikan konsistensi data
+type Mahasiswa = {
+  nim: string;
+  nama: string;
+  umur: string;
+  fakultas: string;
+  jurusan: string;
+  prodi: string;
+};
+
+export default function Dashboard() {
+  const [mahasiswa, setMahasiswa] = useState<Mahasiswa[]>([]);
+  const [formData, setFormData] = useState<Mahasiswa>({
+    nim: '',
+    nama: '',
+    umur: '',
+    fakultas: '',
+    jurusan: '',
+    prodi: ''
+  });
 
   useEffect(() => {
-    fetch('/api/students')
-      .then((res) => res.json())
-      .then((data) => setStudents(data));
+    fetchData();
   }, []);
 
-  const createStudent = async () => {
-    await fetch('/api/students', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newStudent),
-    });
-    setNewStudent({ name: '', age: '', major: '' });
-    const res = await fetch('/api/students');
-    setStudents(await res.json());
+  const fetchData = async () => {
+    const { data } = await axios.get('/api/mahasiswa');
+    setMahasiswa(data);
   };
 
-  const deleteStudent = async (id: number) => {
-    await fetch(`/api/students/${id}`, {
-      method: 'DELETE',
-    });
-    const res = await fetch('/api/students');
-    setStudents(await res.json());
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await axios.post('/api/mahasiswa', formData);
+    fetchData();
+  };
+
+  const handleDelete = async (nim: string) => {
+    await axios.delete(`/api/mahasiswa?id=${nim}`);
+    fetchData();
+  };
+
+  const handleUpdate = async (mahasiswa: Mahasiswa) => {
+    await axios.put('/api/mahasiswa', mahasiswa);
+    fetchData();
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl mb-4">Student Dashboard</h1>
-      
-      <div className="mb-4">
-        <h2 className="text-xl">Create New Student</h2>
-        <input
-          style={{ color: 'black' }}
-          className="border p-2 mb-2"
-          type="text"
-          placeholder="Name"
-          value={newStudent.name}
-          onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-        />
-        <input
-          style={{ color: 'black' }}
-          className="border p-2 mb-2"
-          type="text"
-          placeholder="Age"
-          value={newStudent.age}
-          onChange={(e) => setNewStudent({ ...newStudent, age: e.target.value })}
-        />
-        <input
-          style={{ color: 'black' }}
-          className="border p-2 mb-2"
-          type="text"
-          placeholder="Major"
-          value={newStudent.major}
-          onChange={(e) => setNewStudent({ ...newStudent, major: e.target.value })}
-        />
-        <button className="bg-blue-500 text-white p-2" onClick={createStudent}>
-          Create
-        </button>
-      </div>
+    <div className="p-8">
+      <h1 className="text-2xl font-bold mb-6">Dashboard Mahasiswa</h1>
 
-      <h2 className="text-xl mb-2">Students List</h2>
-      <ul>
-        {students.map((student) => (
-          <li key={student.nim} className="mb-2">
-            {student.name}, {student.age}, {student.major}
-            <button className="bg-red-500 text-white p-1 ml-2" onClick={() => deleteStudent(student.nim)}>
-              Delete
-            </button>
-          </li>
-        ))}
-      </ul>
+      <form onSubmit={handleSubmit} className="space-y-4">
+      {['nim', 'nama', 'umur', 'fakultas', 'jurusan', 'prodi'].map((field) => (
+  <input
+    key={field}
+    name={field}
+    placeholder={field.toUpperCase()}
+    value={formData[field as keyof Mahasiswa]} // Gunakan indexing yang benar
+    onChange={handleChange}
+    className="w-full p-2 border rounded"
+  />
+))}
+
+        <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">Tambah</button>
+      </form>
+
+      <table className="w-full mt-6 border">
+        <thead>
+          <tr>
+            <th>NIM</th><th>Nama</th><th>Umur</th><th>Fakultas</th><th>Jurusan</th><th>Prodi</th><th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          {mahasiswa.map((mhs) => (
+            <tr key={mhs.nim} className="border-b">
+              {Object.values(mhs).map((val, idx) => (
+                <td key={idx} className="p-2">{val}</td>
+              ))}
+              <td className="p-2 space-x-2">
+                <button
+                  onClick={() => handleDelete(mhs.nim)}
+                  className="bg-red-500 text-white px-2 py-1 rounded"
+                >
+                  Hapus
+                </button>
+                <button
+                  onClick={() => handleUpdate(mhs)}
+                  className="bg-yellow-500 text-white px-2 py-1 rounded"
+                >
+                  Update
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
-};
-
-export default Dashboard;
+}
