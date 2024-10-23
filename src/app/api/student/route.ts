@@ -1,15 +1,8 @@
 // src/app/api/students/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import mysql from 'mysql2/promise';
+import db from '../api';
 
-const db = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: 'your_password',
-  database: 'students_db'
-});
-
-export async function GET(req: NextRequest) {
+export async function GET(_: NextRequest) {
   const [rows] = await db.query('SELECT * FROM students');
   return NextResponse.json(rows);
 }
